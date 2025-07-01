@@ -7,44 +7,50 @@ from .models import UserProfile
 from .schema import UserCreateSchema,UserReadSchema
 from django.db import transaction
 from django.contrib.auth import get_user_model
+import logging
+import time
+from django.urls import reverse
+from azbankgateways.exceptions import AZBankGatewaysException
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
-@api_controller("/shop", auth=JWTAuth(), tags=['shop'])
+@api_controller("/shop", auth=None, tags=['shop'])
 class ShopController:
-    @route.post("/purchase-credits")
-    def purchase_credits(self, request: HttpRequest, amount: int = 10000):
-        user = request.auth
-        user_profile = get_object_or_404(UserProfile, user=user)
-
-        factory = bankfactories.BankFactory()
+    @route.get("/purchase-credits")
+    def purchase_credits(self, request: HttpRequest, amount: int = 1000000000):
+        user_mobile_number="+989171111111"
+        factory=bankfactories.BankFactory()
         try:
-            bank = factory.auto_create()
-            bank.set_request(request)
+            bank=(
+                factory.auto_create()
+                )
             bank.set_amount(amount)
-            bank.set_client_callback_url('/bankgateways/callback/')
-            bank.set_reference_number(user_profile.id)
-            bank_record = bank.ready()
-            return {"redirect_url": bank.redirect_gateway()}
-        except bank_exceptions.BankGatewayException as e:
-            return {"error": str(e)}
-
-    @route.get("/check-payment-status")
-    def check_payment_status(self, request: HttpRequest, tracking_code: str):
+            bank.set_request(request)
+            bank.set_custom_data({"a":"b"})
+            bank.set_client_callback_url("http://127.0.0.1:8001/api/shop/")
+            bank_record=bank.ready()
+            print(bank_record)
+            return bank.redirect_gateway()
+        except AZBankGatewaysException as e:
+            logging.critical(e)
+            raise e
+        
+    @route.get("/")
+    def check_payment_status(self, request: HttpRequest, tc: str):
         user = request.auth
         user_profile = get_object_or_404(UserProfile, user=user)
 
         try:
             bank_record = get_object_or_404(
-                bank_models.Bank, tracking_code=tracking_code, reference_number=user_profile.id
+                bank_models.Bank, tracking_code=tc,reference_number=user_profile.id
             )
             if bank_record.is_success:
-                if not bank_record.is_completed():
-                    credits_to_add = bank_record.amount / 100
-                    user_profile.credits += credits_to_add
-                    user_profile.save()
-                    bank_record.set_as_completed()
+                
+                credits_to_add = bank_record.amount / 100
+                user_profile.credits += credits_to_add
+                user_profile.save()
                 return {"status": "success", "message": "Payment successful and credits added."}
             else:
                 return {"status": "failed", "message": bank_record.get_message()}
@@ -62,4 +68,9 @@ class Registration:
                 password=payload.password,
             )
             UserProfile.objects.create(user=user, credits=1)
-        return user
+            return {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "credits": user.profile.credits,  
+            }

@@ -41,11 +41,13 @@ INSTALLED_APPS = [
     'ninja_extra',
     'creditpurchase',
     "azbankgateways",
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -132,19 +134,35 @@ NINJA_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
+
 AZ_IRANIAN_BANK_GATEWAYS = {
-   'DEFAULT': 'ZARINPAL', 
-   'CURRENCY': 'IRR', 
-   'GATEWAYS': {
-       'ZARINPAL': {
-           'MERCHANT_CODE': 'YOUR_MERCHANT_CODE_HERE', 
-           'SANDBOX': 1, 
-       },
-       'SEP': {
-            'MERCHANT_CODE': 'YOUR_MERCHANT_CODE_HERE',
-            'TERMINAL_CODE': 'YOUR_TERMINAL_CODE_HERE',
-       },
-       
-   },
-   'IS_SAMPLE_FORM_ENABLE': True, 
+    "GATEWAYS": {
+      
+        "ZARINPAL": {
+            "MERCHANT_CODE": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+            "SANDBOX": 1,  # 0 disable, 1 active
+            "IS_ENABLED": True,
+        },
+      
+    },
+    "IS_SAMPLE_FORM_ENABLE": True,  # اختیاری و پیش فرض غیر فعال است
+    "DEFAULT": "ZARINPAL",
+    "CURRENCY": "IRR",  # اختیاری
+    "TRACKING_CODE_QUERY_PARAM": "tc",  # اختیاری
+    "TRACKING_CODE_LENGTH": 16,  # اختیاری
+    "SETTING_VALUE_READER_CLASS": "azbankgateways.readers.DefaultReader",  # اختیاری
+    "BANK_PRIORITIES": [
+        "ZARINPAL",
+
+    ],  
+    "IS_SAFE_GET_GATEWAY_PAYMENT": False,  # اختیاری، بهتر است True بزارید.
+    "CUSTOM_APP": None,  # اختیاری
 }
+CORS_ALLOWED_ORIGINS = [
+         "http://localhost:5173", 
+         "https://localhost:5173", 
+     ]
+CORS_ALLOW_ALL_ORIGINS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173", "https://localhost:5173"]
