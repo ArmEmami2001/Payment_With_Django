@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Payment App</title>
+    <!-- React Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Basic CSS for styling the application */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        #root {
+            width: 100%;
+            max-width: 450px;
+            padding: 2rem;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        h2 {
+            text-align: center;
+            color: #1a202c;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        input {
+            padding: 0.8rem 1rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .button {
+            padding: 0.9rem;
+            background: linear-gradient(90deg, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+
+        .toggle-view {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .toggle-button {
+            background: none;
+            border: none;
+            color: #3182ce;
+            cursor: pointer;
+            font-weight: 500;
+            padding: 0;
+        }
+        
+        .message {
+            padding: 1rem;
+            margin-top: 1.5rem;
+            border-radius: 8px;
+            text-align: left;
+            font-weight: 500;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .message.success {
+            background-color: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .message.error {
+            background-color: #fed7d7;
+            color: #c53030;
+        }
+        
+        .shop-info {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .credits {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #2f855a;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const App = () => {
+            const [view, setView] = useState('register');
+            const [token, setToken] = useState(null);
+            const [message, setMessage] = useState('');
+            
+            const [username, setUsername] = useState('');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            
+            const [amount, setAmount] = useState(10000);
+            const [credits, setCredits] = useState(0);
+            const [currentUser, setCurrentUser] = useState(null);
+
+            const API_URL = 'http://127.0.0.1:8000';
+
+            useEffect(() => {
+                const storedToken = localStorage.getItem('jwt-token');
+                const storedUsername = localStorage.getItem('username');
+
+                if (storedToken && storedUsername) {
+                    setToken(storedToken);
+                    setCurrentUser(storedUsername);
+                    setView('shop');
+                    
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const trackingCode = urlParams.get('tc');
+                    if (trackingCode) {
+                        verifyPayment(trackingCode, storedToken);
+                    }
+                }
+            }, []);
+
+            const handleApiResponse = async (response) => {
+                const data = await response.json();
+                if (!response.ok) {
+                    const errorMsg = data.detail || data.error || JSON.stringify(data);
+                    throw new Error(errorMsg);
+                }
+                return data;
+            };
+            
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setMessage('');
+                try {
+                    const response = await fetch(`${API_URL}/api/token/pair`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await handleApiResponse(response);
+                    
+                    localStorage.setItem('jwt-token', data.access);
+                    localStorage.setItem('username', username);
+                    setToken(data.access);
+                    setCurrentUser(username);
+                    setView('shop');
+                } catch (error) {
+                    setMessage(`Error: ${error.message}`);
+                }
+            };
+
+            const handlePurchase = async (e) => {
+                e.preventDefault();
+                setMessage('');
+                try {
+                    // CONSTRUCT THE URL FOR A GET REQUEST
+                    const purchaseUrl = `${API_URL}/api/shop/purchase-credits?amount=${amount}`;
+                    
+                    // SEND THE GET REQUEST WITH THE AUTH TOKEN
+                    const response = await fetch(purchaseUrl, {
+                        method: 'GET', // <-- THIS IS THE FIX
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await handleApiResponse(response);
+
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    }
+
+                } catch (error) {
+                    setMessage(`Error: ${error.message}`);
+                }
+            };
+
+            const verifyPayment = async (trackingCode, authToken) => {
+                setMessage(`Verifying payment...`);
+                try {
+                    const response = await fetch(`${API_URL}/api/shop/verify-payment?tracking_code=${trackingCode}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    const data = await handleApiResponse(response);
+                    setMessage(`${data.status}: ${data.message}`);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (error) {
+                    setMessage(`Error verifying payment: ${error.message}`);
+                }
+            };
+            
+            const handleLogout = () => {
+                localStorage.removeItem('jwt-token');
+                localStorage.removeItem('username');
+                setToken(null);
+                setCurrentUser(null);
+                setView('login');
+            };
+
+            const handleRegister = async (e) => {
+                e.preventDefault();
+                setMessage('');
+                try {
+                    const response = await fetch(`${API_URL}/api/register/create_user`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, email, password })
+                    });
+                    await handleApiResponse(response);
+                    setMessage('Registration successful! Please log in.');
+                    setView('login');
+                } catch (error) {
+                    setMessage(`Error: ${error.message}`);
+                }
+            };
+
+            return (
+                <div className="container">
+                    { !token ? (
+                        <>
+                            {view === 'register' ? (
+                                <>
+                                    <h2>Create Account</h2>
+                                    <form className="form" onSubmit={handleRegister}>
+                                       <div className="input-group">
+                                            <label>Username</label>
+                                            <input type="text" value={username} onChange={e => setUsername(e.target.value)} required />
+                                        </div>
+                                        <div className="input-group">
+                                            <label>Email</label>
+                                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                                        </div>
+                                        <div className="input-group">
+                                            <label>Password</label>
+                                            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                                        </div>
+                                        <button className="button" type="submit">Register</button>
+                                    </form>
+                                    <div className="toggle-view">
+                                        <p>Already have an account? <button className="toggle-button" onClick={() => setView('login')}>Log in</button></p>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h2>Login</h2>
+                                    <form className="form" onSubmit={handleLogin}>
+                                       <div className="input-group">
+                                            <label>Username</label>
+                                            <input type="text" value={username} onChange={e => setUsername(e.target.value)} required />
+                                        </div>
+                                        <div className="input-group">
+                                            <label>Password</label>
+                                            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                                        </div>
+                                        <button className="button" type="submit">Login</button>
+                                    </form>
+                                    <div className="toggle-view">
+                                        <p>Don't have an account? <button className="toggle-button" onClick={() => setView('register')}>Register</button></p>
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <h2>Payment Portal</h2>
+                            <div className="shop-info">
+                               <p>Welcome, <strong>{currentUser || 'User'}</strong>!</p>
+                               <p className="credits">Your Credits: {credits}</p>
+                            </div>
+                            
+                            <form className="form" onSubmit={handlePurchase}>
+                               <h3>Purchase Credits</h3>
+                                <div className="input-group">
+                                    <label>Amount (IRR)</label>
+                                    <input type="number" value={amount} onChange={e => setAmount(e.target.value)} required />
+                                </div>
+                                <button className="button" type="submit">Purchase</button>
+                            </form>
+
+                            <div className="toggle-view">
+                                <button className="toggle-button" onClick={handleLogout}>Logout</button>
+                            </div>
+                        </>
+                    )}
+
+                    {message && <div className={`message ${message.toLowerCase().includes('error') ? 'error' : 'success'}`}>{message}</div>}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

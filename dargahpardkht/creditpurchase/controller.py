@@ -16,7 +16,7 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-@api_controller("/shop", auth=None, tags=['shop'])
+@api_controller("/shop", auth=JWTAuth(), tags=['shop'])
 class ShopController:
     @route.get("/purchase-credits")
     def purchase_credits(self, request: HttpRequest, amount: int = 1000000000):
@@ -29,10 +29,16 @@ class ShopController:
             bank.set_amount(amount)
             bank.set_request(request)
             bank.set_custom_data({"a":"b"})
-            bank.set_client_callback_url("http://127.0.0.1:8001/api/shop/")
+            bank.set_client_callback_url("http://127.0.0.1:8000/api/shop/")
             bank_record=bank.ready()
             print(bank_record)
-            return bank.redirect_gateway()
+            redirect_object = bank.redirect_gateway()
+            
+            # 2. Extract the URL string from that object's .url attribute
+            redirect_url_string = redirect_object.url
+            
+            # 3. Return the URL string in a clean JSON response
+            return self.api.create_response(request, {"redirect_url": redirect_url_string}, status=200)
         except AZBankGatewaysException as e:
             logging.critical(e)
             raise e
@@ -74,3 +80,4 @@ class Registration:
                 "email": user.email,
                 "credits": user.profile.credits,  
             }
+        
