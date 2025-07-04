@@ -140,3 +140,126 @@ python -m http.server 5500
 5. Get redirected back with `?tc=...`
 6. Credits update automatically
 
+📦 API Endpoint Explanations
+----------------------
+### 🔐 `POST /api/token/pair`
+Authenticate a user using their username and password and return a **JWT access + refresh token pair**.
+
+**Request Body**
+```json
+{
+  "username": "john",
+  "password": "1234"
+}
+```
+
+**Response**
+```json
+{
+  "access": "eyJhbGciOiJIUzI1NiIsInR5...",
+  "refresh": "eyJhbGciOiJIUzI1NiIsInR5..."
+}
+```
+
+---
+
+### 👤 `GET /api/profile/`
+Returns the authenticated user’s basic profile including current credit balance.
+
+**Headers**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response**
+```json
+{
+  "username": "john",
+  "credits": 100000
+}
+```
+
+---
+
+### 🧾 `POST /api/register/create_user`
+Registers a new user account with a username and password.
+
+**Request Body**
+```json
+{
+  "username": "john",
+  "password": "1234"
+}
+```
+
+**Response**
+```json
+{
+  "message": "User created successfully."
+}
+```
+
+---
+
+### 💸 `GET /api/shop/purchase-credits?amount=10000`
+Initiates a payment via Zarinpal and returns a `redirect_url` to the payment gateway.
+
+**Query Parameters**
+```
+amount (int): Amount in IRR (e.g., 10000)
+```
+
+**Headers**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response**
+```json
+{
+  "redirect_url": "https://sandbox.zarinpal.com/pg/StartPay/..."
+}
+```
+
+---
+
+### ✅ `GET /api/shop/verify-payment?tc=<tracking_code>`
+Verifies the payment via AzBankGateways and, if successful, updates the user's credit balance.
+
+**Query Parameters**
+```
+tc: tracking code provided by AzBankGateways (e.g., ?tc=2381329348539292)
+```
+
+**Headers**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response (Success)**
+```json
+{
+  "message": "Payment verified and credits added.",
+  "credits_added": 10000,
+  "new_balance": 110000
+}
+```
+
+**Response (Failure)**
+```json
+{
+  "message": "Payment failed or already verified."
+}
+```
+
+---
+
+## 🔒 Authentication Summary
+
+All `/api/shop/...` and `/api/profile/` endpoints require:
+
+```
+Authorization: Bearer <JWT Access Token>
+```
+
+Use `/api/token/pair` to obtain this after logging in.
