@@ -4,13 +4,14 @@ from ninja_extra import api_controller, route
 from ninja_jwt.authentication import JWTAuth
 from azbankgateways import bankfactories, models as bank_models, exceptions as bank_exceptions
 from .models import UserProfile
-from .schema import UserCreateSchema,UserReadSchema
+from .schema import UserCreateSchema,UserReadSchema,ErrorSchema
 from django.db import transaction
 from django.contrib.auth import get_user_model
 import logging
 import time
 from django.urls import reverse
 from azbankgateways.exceptions import AZBankGatewaysException
+from ninja.errors import HttpError
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class ShopController:
         factory=bankfactories.BankFactory()
         try:
             bank=(
-                factory.create("BMI")
+                factory.auto_create()
                 )
 
             bank.set_amount(amount)
@@ -39,12 +40,14 @@ class ShopController:
             bank_record.extra_information=0
             redirect_object = bank.redirect_gateway()
             redirect_url_string = redirect_object.url
-            return self.api.create_response(request, {"redirect_url": redirect_url_string}, status=200)
+            return {"redirect_url": redirect_object.url}
         except AZBankGatewaysException as e:
-            logging.critical(e)
-            raise e
-        
-    @route.get("/verify-payment")
+            logger.error(f"Bank gateway error for user {user.username}: {e}")
+            raise HttpError(503, "Payment gateway service is unavailable. Please try again later.")
+        except Exception as e:
+            logger.critical(f"Unexpected error during credit purchase for user {user.username}: {e}")
+            raise HttpError(500, "An unexpected server error occurred.")
+    @route.get("/verify-payment",auth=JWTAuth())
     def check_payment_status(self, request: HttpRequest, tc: str):
         user = request.auth
         user_profile = get_object_or_404(UserProfile, user=user)
@@ -73,7 +76,7 @@ class ShopController:
         
 @api_controller("/register")
 class Registration:
-    @route.post("/create_user", response=UserReadSchema)
+    @route.post("/create_user", response={200: UserReadSchema, 404: ErrorSchema, 502: ErrorSchema, 500: ErrorSchema})
     def create(self, request, payload: UserCreateSchema):
         with transaction.atomic():
             user = User.objects.create_user(

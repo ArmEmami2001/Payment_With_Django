@@ -127,22 +127,42 @@ AZ_IRANIAN_BANK_GATEWAYS = {
             "IS_ENABLED": True,
         },
         "BMI": {
-            "MERCHANT_CODE": "12345",
-            "TERMINAL_CODE": "GBHDTY98",
+            "MERCHANT_CODE": "123",
+            "TERMINAL_CODE": "123",
             "SECRET_KEY": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz",
             "IS_ENABLED": True,
         },
-      
+        "SEP": {
+            "MERCHANT_CODE": "FFE3444Y-PV6M23",
+            "TERMINAL_CODE": "user123",
+            "USERNAME": "user123",
+            "PASSWORD": "pass123",
+            "IS_ENABLED": True,
+        },
+        "IDPAY": {
+            "MERCHANT_CODE":  "TEST-ec55bbaa-XXXX-YYYY-ZZZZ-1234567890ab",
+            "METHOD": "GET",  # GET or POST
+            "X_SANDBOX": 1,  # 0 disable, 1 active
+            "IS_ENABLED": True,
+        },
+        "ZIBAL": {
+            "MERCHANT_CODE":  "zibal",
+            "IS_ENABLED": True,
+        },
+
     },
     "IS_SAMPLE_FORM_ENABLE": False,  # اختیاری و پیش فرض غیر فعال است
-    "DEFAULT": "BMI",
+    "DEFAULT": "IDPAY",
     "CURRENCY": "IRR",  # اختیاری
     "TRACKING_CODE_QUERY_PARAM": "tc",  # اختیاری
     "TRACKING_CODE_LENGTH": 16,  # اختیاری
     "SETTING_VALUE_READER_CLASS": "azbankgateways.readers.DefaultReader",  # اختیاری
     "BANK_PRIORITIES": [
-        "BMI",
+        "ZIBAL",
         "ZARINPAL",
+        "BMI",
+        "IDPAY"
+        "SEP",
         
 
     ],  

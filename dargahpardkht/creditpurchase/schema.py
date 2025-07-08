@@ -11,3 +11,7 @@ class UserReadSchema(Schema):
     username: str
     email: str
     credits: Optional[int] 
+
+class ErrorSchema(Schema):
+    """Standard schema for error responses."""
+    detail: str
