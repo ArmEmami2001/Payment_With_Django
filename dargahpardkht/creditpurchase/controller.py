@@ -19,20 +19,22 @@ logger = logging.getLogger(__name__)
 @api_controller("/shop", auth=JWTAuth(), tags=['shop'])
 class ShopController:
     @route.get("/purchase-credits",auth=JWTAuth())
-    def purchase_credits(self, request: HttpRequest, amount: int = 100000):
+    def purchase_credits(self, request: HttpRequest, amount: int = 10000):
         user_mobile_number="+989171111111"
         user = request.auth 
         user_profile = get_object_or_404(UserProfile, user=user)
         factory=bankfactories.BankFactory()
         try:
             bank=(
-                factory.auto_create()
+                factory.create("BMI")
                 )
 
             bank.set_amount(amount)
             bank.set_request(request)
             bank.set_custom_data({"a":"b"}) 
+            bank.set_mobile_number(user_mobile_number)
             bank.set_client_callback_url("http://localhost:5500/index.html?tc={tracking_code}")
+            print("this isssss",bank)
             bank_record=bank.ready()
             bank_record.extra_information=0
             redirect_object = bank.redirect_gateway()

@@ -7,7 +7,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 env_path = BASE_DIR / '.env'
 
-
 load_dotenv(dotenv_path=env_path)
 
 SECRET_KEY = os.getenv('SECRET_KEY')
@@ -17,6 +16,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 
 
@@ -125,16 +126,24 @@ AZ_IRANIAN_BANK_GATEWAYS = {
             "SANDBOX": 1,  # 0 disable, 1 active
             "IS_ENABLED": True,
         },
+        "BMI": {
+            "MERCHANT_CODE": "12345",
+            "TERMINAL_CODE": "GBHDTY98",
+            "SECRET_KEY": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIz",
+            "IS_ENABLED": True,
+        },
       
     },
     "IS_SAMPLE_FORM_ENABLE": False,  # اختیاری و پیش فرض غیر فعال است
-    "DEFAULT": "ZARINPAL",
+    "DEFAULT": "BMI",
     "CURRENCY": "IRR",  # اختیاری
     "TRACKING_CODE_QUERY_PARAM": "tc",  # اختیاری
     "TRACKING_CODE_LENGTH": 16,  # اختیاری
     "SETTING_VALUE_READER_CLASS": "azbankgateways.readers.DefaultReader",  # اختیاری
     "BANK_PRIORITIES": [
+        "BMI",
         "ZARINPAL",
+        
 
     ],  
     "IS_SAFE_GET_GATEWAY_PAYMENT": False,  # اختیاری، بهتر است True بزارید.
