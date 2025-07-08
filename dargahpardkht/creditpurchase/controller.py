@@ -34,34 +34,13 @@ class ShopController:
             bank.set_custom_data({"a":"b"}) 
             bank.set_client_callback_url("http://localhost:5500/index.html?tc={tracking_code}")
             bank_record=bank.ready()
+            bank_record.extra_information=0
             redirect_object = bank.redirect_gateway()
             redirect_url_string = redirect_object.url
             return self.api.create_response(request, {"redirect_url": redirect_url_string}, status=200)
         except AZBankGatewaysException as e:
             logging.critical(e)
             raise e
-    # @route.get("/purchase-20credits",auth=JWTAuth())
-    # def purchase_credits(self, request: HttpRequest, amount: int = 200000):
-    #     user_mobile_number="+989171111111"
-    #     user = request.auth 
-    #     user_profile = get_object_or_404(UserProfile, user=user)
-    #     factory=bankfactories.BankFactory()
-    #     try:
-    #         bank=(
-    #             factory.auto_create()
-    #             )
-
-    #         bank.set_amount(amount)
-    #         bank.set_request(request)
-    #         bank.set_custom_data({"a":"b"}) 
-    #         bank.set_client_callback_url("http://localhost:5500/index.html?tc={tracking_code}")
-    #         bank_record=bank.ready()
-    #         redirect_object = bank.redirect_gateway()
-    #         redirect_url_string = redirect_object.url
-    #         return self.api.create_response(request, {"redirect_url": redirect_url_string}, status=200)
-    #     except AZBankGatewaysException as e:
-    #         logging.critical(e)
-    #         raise e
         
     @route.get("/verify-payment")
     def check_payment_status(self, request: HttpRequest, tc: str):
@@ -72,15 +51,21 @@ class ShopController:
             
             bank_record = get_object_or_404(
                 bank_models.Bank, tracking_code=tc )
+            print("this iss:",type(bank_record.extra_information))
             
-            if bank_record.is_success:
-                
-                credits_to_add = int(bank_record.amount)/1000
-                user_profile.credits += int(credits_to_add)
-                user_profile.save()
+            if bank_record.is_success and bank_record.extra_information == "0":
+                with transaction.atomic():
+                    bank_record.extra_information = 1
+                    bank_record.save()
+                    print("this isss",bank_record.extra_information)
+                    credits_to_add = int(bank_record.amount)/1000
+                    user_profile.credits += int(credits_to_add)
+                    user_profile.save()
                 return {"status": "success", "message": "Payment successful and credits added."}
+            elif bank_record.is_success and bank_record.extra_information == "1":
+                return {"status": "failed", "message": "Already Added"}
             else:
-                return {"status": "failed", "message": bank_record.get_message()}
+                return {"status": "failed", "message": "Payment Failed"}
         except bank_models.Bank.DoesNotExist:
             return {"status": "error", "message": "Transaction not found."}
         
