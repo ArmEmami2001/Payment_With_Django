@@ -5,6 +5,7 @@ from creditpurchase.controller import ShopController,Registration,ProfileControl
 api = NinjaExtraAPI(
     title="My Project API (with Controllers)",
     version="1.0.0",
+    urls_namespace="main_api",
 )
 
 api.register_controllers(NinjaJWTDefaultController)

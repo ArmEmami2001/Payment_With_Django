@@ -8,10 +8,13 @@ from .schema import UserCreateSchema,UserReadSchema,ErrorSchema
 from django.db import transaction
 from django.contrib.auth import get_user_model
 import logging
-import time
+from django.conf import settings
+from idpay.api import IDPayAPI
 from django.urls import reverse
 from azbankgateways.exceptions import AZBankGatewaysException
 from ninja.errors import HttpError
+import uuid
+import requests 
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -19,6 +22,38 @@ logger = logging.getLogger(__name__)
 
 @api_controller("/shop", auth=JWTAuth(), tags=['shop'])
 class ShopController:
+    @route.get("/purchase-credits-idpay", auth=None)
+    def purchase_credits_idpay(self, request: HttpRequest, amount: int = 10000):
+        # user = request.auth
+        api_key = settings.IDPAY_CONFIG['API_KEY']
+        sandbox = settings.IDPAY_CONFIG['SANDBOX']
+        domain='http://localhost:5500'
+        order_id = str(uuid.uuid4())
+        callback_url = request.build_absolute_uri("/index.html?tc={tracking_code}")
+        idpay_api = IDPayAPI(api_key,domain,sandbox)
+        result = idpay_api.payment(
+            order_id=order_id,
+            amount=amount,
+            callback_page=callback_url,
+            # payer={'name': user.username, 'phone': '09123456789'}
+        )
+        try:
+            response = requests.post(url=url, headers=headers, data=json.dumps(payload))
+            print("---------- IDPay Response ----------")
+            print(f"Status Code: {response.status_code}")
+            print(f"Response Text: {response.text}")
+            print("-----------------------------------")
+        
+        # Now, try to parse the JSON
+            result = response.json()
+
+        except requests.exceptions.JSONDecodeError as e:
+        # If it fails here, the print statements above will tell you why
+            return {"error": "JSON Decode Error", "response": response.text}
+        if 'link' in result:
+            return {"redirect_url": result['link']}
+        else:
+            return {"error": result.get('error_message')}
     @route.get("/purchase-credits",auth=JWTAuth())
     def purchase_credits(self, request: HttpRequest, amount: int = 10000):
         user_mobile_number="+989171111111"
@@ -35,8 +70,8 @@ class ShopController:
             bank.set_custom_data({"a":"b"}) 
             bank.set_mobile_number(user_mobile_number)
             bank.set_client_callback_url("http://localhost:5500/index.html?tc={tracking_code}")
-            print("this isssss",bank)
             bank_record=bank.ready()
+            bank_record.user_id=str(user)
             bank_record.extra_information=0
             redirect_object = bank.redirect_gateway()
             redirect_url_string = redirect_object.url
@@ -56,13 +91,11 @@ class ShopController:
             
             bank_record = get_object_or_404(
                 bank_models.Bank, tracking_code=tc )
-            print("this iss:",type(bank_record.extra_information))
             
             if bank_record.is_success and bank_record.extra_information == "0":
                 with transaction.atomic():
                     bank_record.extra_information = 1
                     bank_record.save()
-                    print("this isss",bank_record.extra_information)
                     credits_to_add = int(bank_record.amount)/1000
                     user_profile.credits += int(credits_to_add)
                     user_profile.save()

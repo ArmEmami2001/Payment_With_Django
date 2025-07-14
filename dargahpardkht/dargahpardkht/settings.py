@@ -152,7 +152,7 @@ AZ_IRANIAN_BANK_GATEWAYS = {
 
     },
     "IS_SAMPLE_FORM_ENABLE": False,  # اختیاری و پیش فرض غیر فعال است
-    "DEFAULT": "IDPAY",
+    "DEFAULT": "ZARINPAL",
     "CURRENCY": "IRR",  # اختیاری
     "TRACKING_CODE_QUERY_PARAM": "tc",  # اختیاری
     "TRACKING_CODE_LENGTH": 16,  # اختیاری
@@ -168,6 +168,14 @@ AZ_IRANIAN_BANK_GATEWAYS = {
     ],  
     "IS_SAFE_GET_GATEWAY_PAYMENT": False,  # اختیاری، بهتر است True بزارید.
     "CUSTOM_APP": None,  # اختیاری
+}
+IDPAY_CONFIG = {
+    'API_KEY': '6a7f99eb-7c20-4412-a972-6dfb7cd253a4',
+    'SANDBOX': True, # Set to False for production
+}
+ZIBAL_CONFIG = {
+    'API_KEY': '6a7f99eb-7c20-4412-a972-6dfb7cd253a4',
+    'SANDBOX': True, # Set to False for production
 }
 CORS_ALLOWED_ORIGINS = [
          "http://localhost:5173", 
